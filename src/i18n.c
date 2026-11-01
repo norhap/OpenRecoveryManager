@@ -36,7 +36,7 @@ static int setting(const char *key, char *value, size_t size)
 static void language(char *locale, size_t size)
 {
 	char brand[64];
-	const char *fallback = "de_DE";
+	const char *fallback = "es_ES";
 	if (setting("config.osd.language", locale, size) || setting("config.misc.locale", locale, size))
 		return;
 	boxinfo_value("displaybrand", brand, sizeof(brand));
