@@ -21,9 +21,11 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <ctype.h>
+#include <dirent.h>
+#include <string.h>
 
 /* The exit codes tell enigma2.sh what to do, like the ones of enigma2. */
 #define ACTION_START 0
@@ -366,6 +368,40 @@ static const int actions[] = {ACTION_START, ACTION_CRASH_LOG, ACTION_CRASH_REPOR
 
 static void system_info(char *text, size_t size);
 
+/* norhap */
+static int is_opkg_running(void)
+{
+	DIR *proc = opendir("/proc");
+	if (!proc)
+		return 0;
+
+	struct dirent *entry;
+	int found = 0;
+	while ((entry = readdir(proc)) != NULL) {
+		if (!isdigit((unsigned char)entry->d_name[0]))
+			continue;
+
+		char path[64];
+		snprintf(path, sizeof(path), "/proc/%s/cmdline", entry->d_name);
+
+		FILE *f = fopen(path, "r");
+		if (!f)
+			continue;
+
+		char cmdline[256] = {0};
+		fread(cmdline, 1, sizeof(cmdline) - 1, f);
+		fclose(f);
+
+		if (strstr(cmdline, "opkg") || strstr(cmdline, "ipkg")) {
+			found = 1;
+			break;
+		}
+	}
+	closedir(proc);
+	return found;
+}
+/* norhap */
+
 /* What the chosen entry does, on the right of the menu. */
 static void preview(const struct ui_context *ui, int item, const struct watch_result *result, const char *info,
 	const char *footer)
@@ -391,6 +427,12 @@ static void preview(const struct ui_context *ui, int item, const struct watch_re
 	char card_title[160];
 	char card[512];
 	const char *extra = NULL;
+
+	/* norhap */
+	if (result && (access("/tmp/.orm-suppress", F_OK) == 0 || is_opkg_running())) // norhap
+		exit(0);
+	/* norhap */
+
 	if (from_shell)
 		texts[0] = N_("Ends the Open Recovery Manager. Enigma2 stays stopped.");
 	describe(result, card_title, sizeof(card_title), card, sizeof(card));
